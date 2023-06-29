@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Gridworld</title>
+    <style>
+      table {
+        border-collapse: collapse;
+      }
+      td {
+        border: 1px solid black;
+        width: 50px;
+        height: 50px;
+        text-align: center;
+        vertical-align: middle;
+      }
+      .start {
+        background-color: green;
+      }
+      .end {
+        background-color: red;
+      }
+      .block {
+        background-color: grey;
+      }
+      .path {
+        background-color: yellow;
+      }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      $(document).ready(function() {
+        var start = null;
+        var end = null;
+        var n = {{ gridworld|length }};
+        var blocks = [];
+
+        $('td').click(function() {
+          if ($(this).hasClass('block')) {
+            $(this).removeClass('block');
+            var index = blocks.indexOf(get_cell_position(this));
+            if (index !== -1) {
+              blocks.splice(index, 1);
+            }
+          } else if (start === null) {
+            start = $(this);
+            $(this).addClass('start');
+          } else if (end === null) {
+            end = $(this);
+            $(this).addClass('end');
+          } else {
+            $(this).addClass('block');
+            blocks.push(get_cell_position(this));
+          }
+        });
+
+        $('#solve').click(function() {
+          if (start && end) {
+            var start_pos = get_cell_position(start[0]);
+            var end_pos = get_cell_position(end[0]);
+            $.ajax({
+              url: '/solve',
+              type: 'POST',
+              contentType: 'application/json',
+              data: JSON.stringify({
+                n: n,
+                start: start_pos,
+                end: end_pos,
+                blocks: blocks
+              }),
+              success: function(solution_path) {
+                $('.path').removeClass('path'); // This line removes the previous path
+                for (var i = 0; i < solution_path.length; i++) {
+                  var row = solution_path[i][0];
+                  var col = solution_path[i][1];
+                  var cell = $('tr').eq(row).find('td').eq(col);
+                  if (!cell.hasClass('start') && !cell.hasClass('end')) {
+                    cell.addClass('path');
+                  }
+                }
+              }
+            });
+          } else {
+            alert('Please set both the start and end points.');
+          }
+        });
+      });
+
+      function get_cell_position(cell) {
+        var row = cell.parentNode.rowIndex;
+        var col = cell.cellIndex;
+        return [row, col];
+      }
+    </script>
+  </head>
+  <body>
+    <table>
+      {% for row in gridworld %}
+        <tr>
+          {% for cell in row %}
+            <td></td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </table>
+    <button id="solve">Solve</button>
+  </body>
+</html>
